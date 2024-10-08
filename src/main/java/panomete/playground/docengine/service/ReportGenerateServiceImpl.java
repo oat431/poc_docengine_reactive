@@ -17,6 +17,7 @@ import java.io.*;
 import java.sql.Date;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.Map;
 
 import static panomete.playground.docengine.utils.EvaluationContexts.enableMapAccess;
@@ -41,15 +42,34 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
             InputStream template = ReportUtils.streamResource("report.docx");
 
             String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-            // mapping attribute to context
-            Map<String,Object> context = Map.of(
-                    "reportDate", now,
-                    "reportUser", person.firstName().concat(" ").concat(person.lastName()),
-                    "nationalId", person.nationalId(),
-                    "dateOfBirth", person.dateOfBirth().toString(),
-                    "address1", person.address().addressLine1(),
-                    "address2", person.address().addressLine2()
-            );
+
+            Map<String, Object> context = new HashMap<>();
+            context.put("reportDate", now);
+            context.put("reportUser", person.firstName().concat(" ").concat(person.lastName()));
+            context.put("nationalId", person.nationalId());
+            context.put("dateOfBirth", person.dateOfBirth().toString());
+            context.put("address1", person.address().addressLine1());
+            context.put("address2", person.address().addressLine2());
+            context.put("male", person.isMale());
+            context.put("female", person.isFemale());
+            context.put("other", person.isOther());
+            context.put("young", person.isYoung());
+            context.put("adult", person.isAdult());
+            context.put("old", person.isOld());
+            context.put("todos", person.todos());
+//            Map<String,Object> context = Map.of(
+//                    "reportDate", now,
+//                    "reportUser", person.firstName().concat(" ").concat(person.lastName()),
+//                    "nationalId", person.nationalId(),
+//                    "dateOfBirth", person.dateOfBirth().toString(),
+//                    "address1", person.address().addressLine1(),
+//                    "address2", person.address().addressLine2(),
+//                    "young", person.isYoung(),
+//                    "adult", person.isAdult(),
+//                    "old", person.isOld(),
+//                    "todos", person.todos()
+//            );
+
 
             // generate docx
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
