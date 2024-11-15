@@ -41,4 +41,20 @@ public class ReportUtils {
                 throw new RuntimeException(e);
             }
     }
+
+    public static File convertToPDFFile(ByteArrayOutputStream byteArrayOutputStream, String preFix) {
+        try {
+            WordprocessingMLPackage wordprocessingMLPackage = WordprocessingMLPackage.load(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+            File pdfFile = new File(fileName(preFix));
+            OutputStream out = new FileOutputStream(pdfFile);
+            Docx4J.toPDF(wordprocessingMLPackage, out);
+            return pdfFile;
+        } catch (FileNotFoundException | Docx4JException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String fileName(String prefix) {
+        return  "src/main/resources/output/" + format("%s-report-%s.pdf", prefix, System.currentTimeMillis());
+    }
 }

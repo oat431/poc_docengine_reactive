@@ -34,6 +34,12 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
                 .flatMap(this::reportMapper);
     }
 
+    @Override
+    public Mono<File> generatePersonReportV2() {
+        return mockServiceUtil.mockPersonAsync()
+                .flatMap(this::reportMapperFile);
+    }
+
     private Mono<Void> reportMapper(Person person) {
         return Mono.defer(() -> {
             // setup report generator
@@ -43,6 +49,7 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
 
             String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
 
+            // map context from the template
             Map<String, Object> context = new HashMap<>();
             context.put("reportDate", now);
             context.put("reportUser", person.firstName().concat(" ").concat(person.lastName()));
@@ -57,18 +64,6 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
             context.put("adult", person.isAdult());
             context.put("old", person.isOld());
             context.put("todos", person.todos());
-//            Map<String,Object> context = Map.of(
-//                    "reportDate", now,
-//                    "reportUser", person.firstName().concat(" ").concat(person.lastName()),
-//                    "nationalId", person.nationalId(),
-//                    "dateOfBirth", person.dateOfBirth().toString(),
-//                    "address1", person.address().addressLine1(),
-//                    "address2", person.address().addressLine2(),
-//                    "young", person.isYoung(),
-//                    "adult", person.isAdult(),
-//                    "old", person.isOld(),
-//                    "todos", person.todos()
-//            );
 
 
             // generate docx
@@ -79,6 +74,43 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
             ReportUtils.convertToPDF(outputStream, person.firstName());
 
             return Mono.empty();
+        });
+    }
+
+    private Mono<File> reportMapperFile(Person person) {
+        return Mono.defer(() -> {
+            // setup report generator
+            OfficeStamperConfiguration configuration = standard().setEvaluationContextConfigurer(enableMapAccess());
+            StreamStamper<WordprocessingMLPackage> stamper = OfficeStampers.docxStamper(configuration);
+            InputStream template = ReportUtils.streamResource("report.docx");
+
+            String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+
+            // map context from the template
+            Map<String, Object> context = new HashMap<>();
+            context.put("reportDate", now);
+            context.put("reportUser", person.firstName().concat(" ").concat(person.lastName()));
+            context.put("nationalId", person.nationalId());
+            context.put("dateOfBirth", person.dateOfBirth().toString());
+            context.put("address1", person.address().addressLine1());
+            context.put("address2", person.address().addressLine2());
+            context.put("male", person.isMale());
+            context.put("female", person.isFemale());
+            context.put("other", person.isOther());
+            context.put("young", person.isYoung());
+            context.put("adult", person.isAdult());
+            context.put("old", person.isOld());
+            context.put("todos", person.todos());
+
+
+            // generate docx
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            stamper.stamp(template, context, outputStream);
+
+            // convert to pdf
+            File outputFile = ReportUtils.convertToPDFFile(outputStream, person.firstName());
+
+            return Mono.just(outputFile);
         });
     }
 }
