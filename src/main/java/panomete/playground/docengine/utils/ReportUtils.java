@@ -1,10 +1,16 @@
 package panomete.playground.docengine.utils;
 
 import org.docx4j.Docx4J;
+import org.docx4j.fonts.IdentityPlusMapper;
+import org.docx4j.fonts.Mapper;
+import org.docx4j.fonts.PhysicalFont;
+import org.docx4j.fonts.PhysicalFonts;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 
 import java.io.*;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -34,22 +40,49 @@ public class ReportUtils {
 
     public static void convertToPDF(ByteArrayOutputStream byteArrayOutputStream, String preFix) {
         try {
-                WordprocessingMLPackage wordprocessingMLPackage = WordprocessingMLPackage.load(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
-                OutputStream out = createOutputStreamPDF(preFix);
-                Docx4J.toPDF(wordprocessingMLPackage, out);
-            } catch (Docx4JException e) {
-                throw new RuntimeException(e);
-            }
+            Mapper fontMapper = new IdentityPlusMapper();
+            WordprocessingMLPackage wordprocessingMLPackage = WordprocessingMLPackage.load(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+            wordprocessingMLPackage.setFontMapper(fontMapper);
+
+            String fontFamily = "Sarabun";
+
+            URI sarabunUri = new File("src/main/resources/font/Sarabun-SemiBold.ttf").toURI();
+            PhysicalFonts.addPhysicalFonts(fontFamily, sarabunUri);
+            PhysicalFont sarabunFont = PhysicalFonts.get(fontFamily);
+            fontMapper.put(fontFamily, sarabunFont);
+            wordprocessingMLPackage.setFontMapper(fontMapper);
+
+            OutputStream out = createOutputStreamPDF(preFix);
+            Docx4J.toPDF(wordprocessingMLPackage, out);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static File convertToPDFFile(ByteArrayOutputStream byteArrayOutputStream, String preFix) {
         try {
+            Mapper fontMapper = new IdentityPlusMapper();
             WordprocessingMLPackage wordprocessingMLPackage = WordprocessingMLPackage.load(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+            wordprocessingMLPackage.setFontMapper(fontMapper);
+
+            String fontFamily = "Sarabun";
+
+            File fontFolder = new File("src/main/resources/font");
+            File[] fontFiles = fontFolder.listFiles((dir, name) -> name.endsWith(".ttf") || name.endsWith(".otf"));
+            PhysicalFont sarabunFont = PhysicalFonts.get(fontFamily);
+            if (fontFiles != null) {
+                for (File fontFile : fontFiles) {
+                    PhysicalFonts.addPhysicalFonts(fontFamily,fontFile.toURI());
+                    fontMapper.put(fontFamily, sarabunFont);
+                    wordprocessingMLPackage.setFontMapper(fontMapper);
+                }
+            }
+
             File pdfFile = new File(fileName(preFix));
             OutputStream out = new FileOutputStream(pdfFile);
             Docx4J.toPDF(wordprocessingMLPackage, out);
             return pdfFile;
-        } catch (FileNotFoundException | Docx4JException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
