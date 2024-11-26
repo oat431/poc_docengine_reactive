@@ -10,7 +10,6 @@ import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 
 import java.io.*;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,6 +37,7 @@ public class ReportUtils {
         }
     }
 
+    // version 1 download directly in to project output folder
     public static void convertToPDF(ByteArrayOutputStream byteArrayOutputStream, String preFix) {
         try {
             Mapper fontMapper = new IdentityPlusMapper();
@@ -59,6 +59,7 @@ public class ReportUtils {
         }
     }
 
+    // version 2 send file via api and delete after download, also download font from folder
     public static File convertToPDFFile(ByteArrayOutputStream byteArrayOutputStream, String preFix) {
         try {
             Mapper fontMapper = new IdentityPlusMapper();
@@ -89,5 +90,16 @@ public class ReportUtils {
 
     private static String fileName(String prefix) {
         return  "src/main/resources/output/" + format("%s-report-%s.pdf", prefix, System.currentTimeMillis());
+    }
+
+    public static byte[] convertToPDFStream(ByteArrayOutputStream byteArrayOutputStream) {
+        try {
+            WordprocessingMLPackage wordprocessingMLPackage = WordprocessingMLPackage.load(new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            Docx4J.toPDF(wordprocessingMLPackage, out);
+            return out.toByteArray();
+        } catch (Docx4JException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

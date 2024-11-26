@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.docx4j.Docx4J;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import panomete.playground.docengine.entity.Person;
 import panomete.playground.docengine.utils.MockServiceUtil;
@@ -38,6 +40,12 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
     public Mono<File> generatePersonReportV2() {
         return mockServiceUtil.mockPersonAsync()
                 .flatMap(this::reportMapperFile);
+    }
+
+    @Override
+    public Mono<Resource> generatePersonReportV3() {
+        return mockServiceUtil.mockPersonAsync()
+                .flatMap(this::reportMapperStream);
     }
 
     private Mono<Void> reportMapper(Person person) {
@@ -112,5 +120,35 @@ public class ReportGenerateServiceImpl implements ReportGenerateService {
 
             return Mono.just(outputFile);
         });
+    }
+
+    private Mono<Resource> reportMapperStream(Person person) {
+        OfficeStamperConfiguration configuration = standard().setEvaluationContextConfigurer(enableMapAccess());
+        StreamStamper<WordprocessingMLPackage> stamper = OfficeStampers.docxStamper(configuration);
+        InputStream template = ReportUtils.streamResource("report_v2.docx");
+        String now = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+
+        // map context from the template
+        Map<String, Object> context = new HashMap<>();
+        context.put("reportDate", now);
+        context.put("reportUser", person.firstName().concat(" ").concat(person.lastName()));
+        context.put("nationalId", person.nationalId());
+        context.put("dateOfBirth", person.dateOfBirth().toString());
+        context.put("address1", person.address().addressLine1());
+        context.put("address2", person.address().addressLine2());
+        context.put("male", person.isMale());
+        context.put("female", person.isFemale());
+        context.put("other", person.isOther());
+        context.put("young", person.isYoung());
+        context.put("adult", person.isAdult());
+        context.put("old", person.isOld());
+        context.put("todos", person.todos());
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        stamper.stamp(template, context, outputStream);
+
+        byte[] pdfStream = ReportUtils.convertToPDFStream(outputStream);
+        Resource resource = new ByteArrayResource(pdfStream);
+        return Mono.just(resource);
     }
 }
